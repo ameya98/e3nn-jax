@@ -539,6 +539,16 @@ def to_s2point(
 
 
 def _s2grid_vectors(y: jnp.ndarray, alpha: jnp.ndarray) -> jnp.ndarray:
+    r"""Calculate the coordinates of the points on the sphere.
+
+    Args:
+        y: array with y values, shape ``(res_beta)``
+        alpha: array with alpha values, shape ``(res_alpha)``
+
+    Returns:
+        r: array of vectors, shape ``(res_beta, res_alpha, 3)``
+    """
+
     return jnp.stack(
         [
             jnp.sqrt(1.0 - y[:, None] ** 2) * jnp.sin(alpha),
