@@ -15,6 +15,10 @@ import numpy as np
 import e3nn_jax as e3nn
 from e3nn_jax import perm
 from e3nn_jax._src.util.math_numpy import basis_intersection, round_to_sqrt_rational
+<<<<<<< HEAD
+=======
+from e3nn_jax._src.util.prod import prod
+>>>>>>> 3d01b11 (RTP add back rounding)
 
 
 def reduced_tensor_product_basis(
