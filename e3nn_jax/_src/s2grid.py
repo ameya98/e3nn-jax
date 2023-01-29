@@ -30,6 +30,7 @@ The discrete representation is therefore
 """
 from typing import Callable, List, Optional, Tuple, Union
 
+import chex
 import jax
 import jax.numpy as jnp
 import numpy as np
