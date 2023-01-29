@@ -208,12 +208,17 @@ class SphericalSignal:
 
     def apply(self, func: Callable[[jnp.ndarray], jnp.ndarray]):
         """Applies a function pointwise on the grid."""
+<<<<<<< HEAD
         new_p_val = parity_function(func) if self.p_val == -1 else self.p_val
         if new_p_val == 0:
             raise ValueError(
                 "Activation: the parity is violated! The input scalar is odd but the activation is neither even nor odd."
             )
         return SphericalSignal(func(self.grid_values), self.quadrature, p_val=new_p_val, p_arg=self.p_arg)
+=======
+        # TODO: obtain the parity of the function and compute the new parity, see `e3nn.scalar_activation`
+        return SphericalSignal(func(self.grid_values), self.quadrature)
+>>>>>>> 6c2305a (add TODO for apply)
 
     @staticmethod
     def _find_peaks_2d(x: np.ndarray) -> List[Tuple[int, int]]:
