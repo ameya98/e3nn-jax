@@ -34,6 +34,10 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import chex
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Sequence, Tuple, Union
+
+import chex
 import jax
 import jax.numpy as jnp
 import numpy as np
