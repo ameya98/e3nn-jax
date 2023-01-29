@@ -30,7 +30,7 @@ The discrete representation is therefore
 """
 from typing import Callable, List, Optional, Tuple, Union
 
-import chex
+from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import chex
@@ -674,7 +674,7 @@ def _spherical_harmonics_s2grid(lmax: int, res_beta: int, res_alpha: int, *, qua
         sh_alpha (`jax.numpy.ndarray`): array of shape ``(res_alpha, 2 * lmax + 1)``
         qw (`jax.numpy.ndarray`): array of shape ``(res_beta)``
     """
-    y, alphas, qw = _s2grid(res_beta, res_alpha, quadrature)
+    y, alphas, qw = _s2grid(res_beta, res_alpha, quadrature=quadrature)
     y, alphas, qw = jax.tree_util.tree_map(lambda x: jnp.asarray(x, dtype), (y, alphas, qw))
     sh_alpha = _sh_alpha(lmax, alphas)  # [..., 2 * l + 1]
     sh_y = _sh_beta(lmax, y)  # [..., (lmax + 1) * (lmax + 2) // 2]
@@ -961,3 +961,25 @@ def _rollout_sh(m: jnp.ndarray, lmax: int) -> jnp.ndarray:
             m_full = m_full.at[..., i_mid + i].set(m[..., l * (l + 1) // 2 + i])
             m_full = m_full.at[..., i_mid - i].set(m[..., l * (l + 1) // 2 + i])
     return m_full
+
+
+def s2grid_vectors(y: jnp.ndarray, alpha: jnp.ndarray) -> jnp.ndarray:
+    r"""Calculate the points on the sphere.
+
+    Args:
+        y: array with y values, shape ``(res_beta)``
+        alpha: array with alpha values, shape ``(res_alpha)``
+
+    Returns:
+        r: array of vectors, shape ``(res_beta, res_alpha, 3)``
+    """
+    assert y.ndim == 1
+    assert alpha.ndim == 1
+    return jnp.stack(
+        [
+            jnp.sqrt(1.0 - y[:, None] ** 2) * jnp.sin(alpha),
+            y[:, None] * jnp.ones_like(alpha),
+            jnp.sqrt(1.0 - y[:, None] ** 2) * jnp.cos(alpha),
+        ],
+        axis=2,
+    )
