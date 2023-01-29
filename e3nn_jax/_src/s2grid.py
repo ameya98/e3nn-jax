@@ -28,7 +28,11 @@ The discrete representation is therefore
 
 .. math:: \{ h_{ij} = f(x_{ij}) \}_{ij}
 """
+<<<<<<< HEAD
 from typing import Callable, List, Optional, Tuple, Union
+=======
+from typing import Callable, List, Optional, Sequence, Tuple, Union
+>>>>>>> 28f9567 (shorten code)
 
 import chex
 import jax
@@ -44,7 +48,11 @@ from .spherical_harmonics import _sh_alpha, _sh_beta
 
 
 class SphericalSignal:
+<<<<<<< HEAD
     grid_values: jnp.ndarray
+=======
+    grid_values: chex.Array
+>>>>>>> 28f9567 (shorten code)
     quadrature: str
     p_val: int
     p_arg: int
@@ -634,6 +642,14 @@ def _spherical_harmonics_s2grid(lmax: int, res_beta: int, res_alpha: int, *, qua
     return y, alphas, sh_y, sh_alpha, qw
 
 
+<<<<<<< HEAD
+=======
+def s2_irreps(lmax: int, p_val: int = 1, p_arg: int = -1) -> e3nn.Irreps:
+    """Returns all Irreps upto l = lmax and of the required parity."""
+    return e3nn.Irreps([(1, (l, p_val * p_arg**l)) for l in range(lmax + 1)])
+
+
+>>>>>>> 28f9567 (shorten code)
 def _check_parities(irreps: e3nn.Irreps, p_val: Optional[int] = None, p_arg: Optional[int] = None) -> Tuple[int, int]:
     p_even = {ir.p for mul, ir in irreps if ir.l % 2 == 0}
     p_odd = {ir.p for mul, ir in irreps if ir.l % 2 == 1}
@@ -642,6 +658,22 @@ def _check_parities(irreps: e3nn.Irreps, p_val: Optional[int] = None, p_arg: Opt
 
     p_even = p_even.pop() if p_even else None
     p_odd = p_odd.pop() if p_odd else None
+<<<<<<< HEAD
+=======
+
+    if p_val is not None and p_arg is not None:
+        if not (p_even in [p_val, None] and p_odd in [p_val * p_arg, None]):
+            raise ValueError(
+                f"irrep ({irreps}) parities are not compatible with the given p_val ({p_val}) and p_arg ({p_arg})."
+            )
+        return p_val, p_arg
+
+    if p_even is not None and p_odd is not None:
+        return p_even, p_even * p_odd
+
+    return p_even, None
+
+>>>>>>> 28f9567 (shorten code)
 
     if p_val is not None and p_arg is not None:
         if not (p_even in [p_val, None] and p_odd in [p_val * p_arg, None]):
@@ -668,12 +700,97 @@ def _check_parities(irreps: e3nn.Irreps, p_val: Optional[int] = None, p_arg: Opt
     if p_even is not None and p_odd is not None:
         return p_even, p_even * p_odd
 
+<<<<<<< HEAD
     return p_even, None
+=======
+    Returns:
+        `e3nn_jax.IrrepsArray`: coefficient array of shape ``(..., (lmax+1)^2)``
+    """
+    res_beta, res_alpha = x.grid_resolution
+
+    irreps = e3nn.Irreps(irreps)
+
+    if not all(mul == 1 for mul, _ in irreps.regroup()):
+        raise ValueError("multiplicities should be ones")
+
+    _check_parities(irreps, x.p_val, x.p_arg)
+
+    lmax = max(irreps.ls)
+
+    if lmax_in is None:
+        lmax_in = lmax
+
+    _, _, sh_y, sha, qw = _spherical_harmonics_s2grid(lmax, res_beta, res_alpha, quadrature=x.quadrature, dtype=x.dtype)
+    # sh_y: (res_beta, (l+1)(l+2)/2)
+
+    # normalize such that it is the inverse of ToS2Grid
+    n = None
+    # lmax_in = max frequency in input; lmax = max freq in output
+    if normalization == "component":
+        n = jnp.sqrt(4 * jnp.pi) * jnp.asarray([jnp.sqrt(2 * l + 1) for l in range(lmax + 1)], x.dtype) * jnp.sqrt(lmax_in + 1)
+    elif normalization == "norm":
+        n = jnp.sqrt(4 * jnp.pi) * jnp.ones(lmax + 1, x.dtype) * jnp.sqrt(lmax_in + 1)
+    elif normalization == "integral":
+        n = 4 * jnp.pi * jnp.ones(lmax + 1, x.dtype)
+    else:
+        raise Exception("normalization needs to be 'norm', 'component' or 'integral'")
+
+    # prepare beta integrand
+    m_in = jnp.asarray(_expand_matrix(range(lmax + 1)), x.dtype)  # [l, m, j]
+    m_out = jnp.asarray(_expand_matrix(irreps.ls), x.dtype)  # [l, m, i]
+    sh_y = _rollout_sh(sh_y, lmax)
+    sh_y = jnp.einsum("lmj,bj,lmi,l,b->mbi", m_in, sh_y, m_out, n, qw)  # [m, b, i]
+
+    # integrate over alpha
+    if fft:
+        int_a = rfft(x.grid_values, lmax) / res_alpha  # [..., res_beta, 2*l+1]
+    else:
+        int_a = jnp.einsum("...ba,am->...bm", x.grid_values, sha) / res_alpha  # [..., res_beta, 2*l+1]
+
+    # integrate over beta
+    int_b = jnp.einsum("mbi,...bm->...i", sh_y, int_a)  # [..., irreps]
+
+    # convert to IrrepsArray
+    return e3nn.IrrepsArray(irreps, int_b)
+>>>>>>> 28f9567 (shorten code)
 
 
 def _normalization(lmax: int, normalization: str, dtype, direction: str, lmax_in=None) -> jnp.ndarray:
     assert direction in ["to_s2", "from_s2"]
 
+<<<<<<< HEAD
+=======
+    The inverse transformation of :func:`e3nn_jax.from_s2grid`
+
+    Args:
+        coeffs (`e3nn_jax.IrrepsArray`): coefficient array
+        res_beta (int): number of points on the sphere in the :math:`\theta` direction
+        res_alpha (int): number of points on the sphere in the :math:`\phi` direction
+        normalization ({'norm', 'component', 'integral'}): normalization of the basis
+        quadrature (str): "soft" or "gausslegendre"
+        fft (bool): True if we use FFT, False if we use the naive implementation
+
+    Returns:
+        `SphericalSignal`: signal on the sphere of shape ``(..., y/beta, alpha)``
+    """
+    coeffs = coeffs.regroup()
+    lmax = coeffs.irreps.ls[-1]
+
+    if not all(mul == 1 for mul, _ in coeffs.irreps):
+        raise ValueError(f"Multiplicities should be ones. Got {coeffs.irreps}.")
+
+    if (p_val is not None) != (p_arg is not None):
+        raise ValueError("p_val and p_arg should be both None or both not None.")
+
+    p_val, p_arg = _check_parities(coeffs.irreps, p_val, p_arg)
+
+    if p_val is None or p_arg is None:
+        raise ValueError(f"p_val and p_arg cannot be determined from the irreps {coeffs.irreps}, please specify them.")
+
+    _, _, sh_y, sha, _ = _spherical_harmonics_s2grid(lmax, res_beta, res_alpha, quadrature=quadrature, dtype=coeffs.dtype)
+
+    n = None
+>>>>>>> 28f9567 (shorten code)
     if normalization == "component":
         # normalize such that all l has the same variance on the sphere
         # given that all component has mean 0 and variance 1
@@ -703,7 +820,28 @@ def _normalization(lmax: int, normalization: str, dtype, direction: str, lmax_in
         else:
             return jnp.ones(lmax + 1, dtype) * jnp.sqrt(4 * jnp.pi)
 
+<<<<<<< HEAD
     raise Exception("normalization needs to be 'norm', 'component' or 'integral'")
+=======
+    m_in = jnp.asarray(_expand_matrix(range(lmax + 1)), coeffs.dtype)  # [l, m, j]
+    m_out = jnp.asarray(_expand_matrix(coeffs.irreps.ls), coeffs.dtype)  # [l, m, i]
+    # put beta component in summable form
+    sh_y = _rollout_sh(sh_y, lmax)
+    sh_y = jnp.einsum("lmj,bj,lmi,l->mbi", m_in, sh_y, m_out, n)  # [m, b, i]
+
+    # multiply spherical harmonics by their coefficients
+    signal_b = jnp.einsum("mbi,...i->...bm", sh_y, coeffs.array)  # [batch, beta, m]
+
+    if fft:
+        if res_alpha % 2 == 0:
+            raise ValueError("res_alpha must be odd for fft")
+
+        signal = irfft(signal_b, res_alpha) * res_alpha  # [..., res_beta, res_alpha]
+    else:
+        signal = jnp.einsum("...bm,am->...ba", signal_b, sha)  # [..., res_beta, res_alpha]
+
+    return SphericalSignal(signal, quadrature=quadrature, p_val=p_val, p_arg=p_arg)
+>>>>>>> 28f9567 (shorten code)
 
 
 def _rfft(x: jnp.ndarray, l: int) -> jnp.ndarray:
