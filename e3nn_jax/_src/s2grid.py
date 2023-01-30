@@ -634,7 +634,7 @@ def _spherical_harmonics_s2grid(lmax: int, res_beta: int, res_alpha: int, *, qua
         sh_alpha (`jax.numpy.ndarray`): array of shape ``(res_alpha, 2 * lmax + 1)``
         qw (`jax.numpy.ndarray`): array of shape ``(res_beta)``
     """
-    y, alphas, qw = _s2grid(res_beta, res_alpha, quadrature=quadrature)
+    y, alphas, qw = _s2grid(res_beta, res_alpha, quadrature)
     y, alphas, qw = jax.tree_util.tree_map(lambda x: jnp.asarray(x, dtype), (y, alphas, qw))
     sh_alpha = _sh_alpha(lmax, alphas)  # [..., 2 * l + 1]
     sh_y = _sh_beta(lmax, y)  # [..., (lmax + 1) * (lmax + 2) // 2]
@@ -798,7 +798,7 @@ def to_s2point(
     coeffs: e3nn.IrrepsArray,
     point: e3nn.IrrepsArray,
     *,
-    normalization: str = "component",
+    normalization: str = "integral",
 ) -> e3nn.IrrepsArray:
     """Evaluate a signal on the sphere given by the coefficient in the spherical harmonics basis.
 
@@ -827,7 +827,7 @@ def to_s2point(
     p_val, _ = _check_parities(coeffs.irreps, None, p_arg)
 
     sh = e3nn.spherical_harmonics(coeffs.irreps.ls, point, True, "integral")  # [*shape2, irreps]
-    n = _normalization(sh.irreps.lmax, normalization, coeffs.dtype)[jnp.array(sh.irreps.ls)]  # [num_irreps]
+    n = _normalization(sh.irreps.lmax, normalization, coeffs.dtype, "to_s2")[jnp.array(sh.irreps.ls)]  # [num_irreps]
     sh = sh * n
 
     shape1 = coeffs.shape[:-1]
