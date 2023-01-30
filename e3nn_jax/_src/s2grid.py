@@ -44,6 +44,7 @@ import e3nn_jax as e3nn
 
 from .activation import parity_function
 from .spherical_harmonics import _sh_alpha, _sh_beta
+from .activation import parity_function
 
 
 class SphericalSignal:
@@ -322,7 +323,6 @@ class SphericalSignal:
         # Handle parity of integral.
         integral_irreps = {1: "0e", -1: "0o"}[self.p_val]
         return e3nn.IrrepsArray(integral_irreps, values)
-
 
 jax.tree_util.register_pytree_node(
     SphericalSignal,
@@ -875,9 +875,8 @@ def to_s2point(
     shape2 = point.shape[:-1]
     sh = sh.reshape((-1, sh.shape[-1]))
 
-    return e3nn.IrrepsArray(
-        {1: "0e", -1: "0o"}[p_val], jnp.einsum("ai,bi->ab", sh.array, coeffs.array).reshape(shape1 + shape2 + (1,))
-    )
+    irreps = {1: "0e", -1: "0o"}[p_val]
+    return e3nn.IrrepsArray(irreps, jnp.einsum("ai,bi->ab", sh.array, coeffs.array).reshape(shape1 + shape2 + (1,)))
 
 def _rfft(x: jnp.ndarray, l: int) -> jnp.ndarray:
     r"""Real fourier transform
