@@ -961,28 +961,3 @@ def _rollout_sh(m: jnp.ndarray, lmax: int) -> jnp.ndarray:
             m_full = m_full.at[..., i_mid + i].set(m[..., l * (l + 1) // 2 + i])
             m_full = m_full.at[..., i_mid - i].set(m[..., l * (l + 1) // 2 + i])
     return m_full
-<<<<<<< HEAD
-=======
-
-
-def s2grid_vectors(y: jnp.ndarray, alpha: jnp.ndarray) -> jnp.ndarray:
-    r"""Calculate the points on the sphere.
-
-    Args:
-        y: array with y values, shape ``(res_beta)``
-        alpha: array with alpha values, shape ``(res_alpha)``
-
-    Returns:
-        r: array of vectors, shape ``(res_beta, res_alpha, 3)``
-    """
-    assert y.ndim == 1
-    assert alpha.ndim == 1
-    return jnp.stack(
-        [
-            jnp.sqrt(1.0 - y[:, None] ** 2) * jnp.sin(alpha),
-            y[:, None] * jnp.ones_like(alpha),
-            jnp.sqrt(1.0 - y[:, None] ** 2) * jnp.cos(alpha),
-        ],
-        axis=2,
-    )
->>>>>>> 1cb0ad2 (to_s2grid() and from_s2grid() now work with SphericalSignals.)
