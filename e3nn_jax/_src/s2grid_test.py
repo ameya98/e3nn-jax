@@ -204,7 +204,7 @@ def test_integrate_scalar(lmax, quadrature):
     coeffs = e3nn.normal(e3nn.s2_irreps(lmax, p_val=1, p_arg=-1), jax.random.PRNGKey(0))
     sig = e3nn.to_s2grid(coeffs, 100, 99, normalization="integral", quadrature=quadrature, p_val=1, p_arg=-1)
     integral = sig.integrate().array.squeeze()
-    
+
     scalar_term = coeffs["0e"].array[0]
     expected_integral = 4 * jnp.pi * scalar_term
     np.testing.assert_allclose(integral, expected_integral, atol=1e-5, rtol=1e-5)
@@ -213,7 +213,7 @@ def test_integrate_scalar(lmax, quadrature):
 @pytest.mark.parametrize("degree", range(10))
 def test_integrate_polynomials(degree):
     sig = SphericalSignal(np.empty((26, 17)), "gausslegendre")
-    sig.grid_values = (sig.grid_y ** degree)[:, None] * jnp.ones_like(sig.grid_values)
+    sig.grid_values = (sig.grid_y**degree)[:, None] * jnp.ones_like(sig.grid_values)
     integral = sig.integrate().array.squeeze()
 
     expected_integral = 4 * jnp.pi / (degree + 1) if degree % 2 == 0 else 0
@@ -222,14 +222,18 @@ def test_integrate_polynomials(degree):
 
 @pytest.mark.parametrize("lmax", [2, 4, 10])
 def test_find_peaks(lmax):
-    pos = jnp.asarray([
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-    ])
-    val = jnp.asarray([
-        1.0,
-        -1.0,
-    ])
+    pos = jnp.asarray(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ]
+    )
+    val = jnp.asarray(
+        [
+            1.0,
+            -1.0,
+        ]
+    )
     coeffs = sum_of_diracs(positions=pos, values=val, lmax=lmax, p_val=1, p_arg=-1)
     sig = e3nn.to_s2grid(coeffs, 50, 49, quadrature="gausslegendre")
 
@@ -240,4 +244,3 @@ def test_find_peaks(lmax):
     x, f = sig.apply(lambda val: -val).find_peaks(lmax)
     negative_peak = x[f.argmax()]
     np.testing.assert_allclose(negative_peak, pos[1], atol=4e-1 / lmax)
-

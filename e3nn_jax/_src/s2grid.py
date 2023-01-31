@@ -313,12 +313,11 @@ class SphericalSignal:
     def integrate(self) -> e3nn.IrrepsArray:
         values = self.quadrature_weights[:, None] * self.grid_values
         values = jnp.sum(values, axis=0)
-        values = jnp.mean(values, keepdims=True) * jnp.float_power(4 * jnp.pi, 1.)
+        values = jnp.mean(values, keepdims=True) * 4 * jnp.pi
         # Handle parity of integral.
         integral_irreps = {1: "0e", -1: "0o"}[self.p_val]
-        return e3nn.IrrepsArray(
-            integral_irreps, values
-        )
+        return e3nn.IrrepsArray(integral_irreps, values)
+
 
 jax.tree_util.register_pytree_node(
     SphericalSignal,
