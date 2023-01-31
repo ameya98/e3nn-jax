@@ -1,10 +1,10 @@
 import jax
+import jax.numpy as jnp
 import numpy as np
 import pytest
-import jax.numpy as jnp
 
 import e3nn_jax as e3nn
-from e3nn_jax._src.s2grid import _irfft, _rfft, _spherical_harmonics_s2grid, SphericalSignal, sum_of_diracs
+from e3nn_jax._src.s2grid import SphericalSignal, _irfft, _rfft, _spherical_harmonics_s2grid
 from e3nn_jax.util import assert_output_dtype_matches_input_dtype
 
 
