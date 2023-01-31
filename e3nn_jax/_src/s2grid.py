@@ -231,15 +231,20 @@ class SphericalSignal:
         return list(set(iii).intersection(set(jjj)))
 
     def find_peaks(self, lmax: int):
-        r"""Locate peaks on the signal on the sphere."""
+        r"""Locate peaks on the signal on the sphere.
+        
+        Currently cannot be wrapped with jax.jit().
+        """
         grid_resolution = self.grid_resolution
         x1, f1 = self.grid_vectors, self.grid_values
+        x1, f1 = jax.tree_map(lambda arr: np.asarray(arr.copy()), (x1, f1))
 
         # Rotate signal.
         abc = (np.pi / 2, np.pi / 2, np.pi / 2)
         rotated_signal = self.transform_by_angles(*abc, lmax=lmax)
         rotated_vectors = e3nn.IrrepsArray("1o", x1).transform_by_angles(*abc).array
         x2, f2 = rotated_vectors, rotated_signal.grid_values
+        x2, f2 = jax.tree_map(lambda arr: np.asarray(arr.copy()), (x2, f2))
 
         ij = self._find_peaks_2d(f1)
         x1p = np.stack([x1[i, j] for i, j in ij])

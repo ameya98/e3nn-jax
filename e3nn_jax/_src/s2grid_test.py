@@ -82,7 +82,7 @@ def test_from_s2grid_dtype(normalization, quadrature, fft):
 @pytest.mark.parametrize("normalization", ["component", "norm"])
 @pytest.mark.parametrize("quadrature", ["soft", "gausslegendre"])
 @pytest.mark.parametrize("fft", [False, True])
-def test_spherical_signal_vmap(quadrature):
+def test_spherical_signal_vmap(normalization, quadrature, fft):
     irreps = "0e + 1o"
     coeffs_orig = e3nn.IrrepsArray(irreps, jnp.ones((10, 4)))
     sigs = jax.vmap(lambda x: e3nn.to_s2grid(x, 100, 99, normalization=normalization, quadrature=quadrature))(coeffs_orig)
@@ -188,11 +188,11 @@ def test_s2_sum_of_diracs_1():
     sig = e3nn.to_s2grid(x, 200, 59, quadrature="gausslegendre")
 
     # The integral of a Dirac delta is 1
-    np.testing.assert_allclose(sig.integral().array, 1.0)
+    np.testing.assert_allclose(sig.integrate().array, 1.0)
 
     # All the weight should be located at the north pole
     sig.grid_values = sig.grid_values.at[-60:].set(0.0)
-    np.testing.assert_allclose(sig.integral().array, 0.0, atol=0.05)
+    np.testing.assert_allclose(sig.integrate().array, 0.0, atol=0.05)
 
 
 @pytest.mark.parametrize("lmax", [1, 2, 3, 4])
@@ -202,7 +202,7 @@ def test_s2_sum_of_diracs_2(lmax):
     x = e3nn.s2_sum_of_diracs(positions, weights, lmax=lmax, p_val=1, p_arg=-1)
     sig = e3nn.to_s2grid(x, 200, 59, quadrature="gausslegendre")
 
-    np.testing.assert_allclose(sig.integral().array, jnp.sum(weights), atol=1e-6)
+    np.testing.assert_allclose(sig.integrate().array, jnp.sum(weights), atol=1e-6)
 
 
 @pytest.mark.parametrize("lmax", [1, 2, 3, 4])
@@ -219,7 +219,7 @@ def test_integrate_scalar(lmax, quadrature):
 
 @pytest.mark.parametrize("degree", range(10))
 def test_integrate_polynomials(degree):
-    sig = SphericalSignal(np.empty((26, 17)), "gausslegendre")
+    sig = e3nn.SphericalSignal(np.empty((26, 17)), "gausslegendre")
     sig.grid_values = (sig.grid_y**degree)[:, None] * jnp.ones_like(sig.grid_values)
     integral = sig.integrate().array.squeeze()
 
@@ -241,7 +241,7 @@ def test_find_peaks(lmax):
             -1.0,
         ]
     )
-    coeffs = sum_of_diracs(positions=pos, values=val, lmax=lmax, p_val=1, p_arg=-1)
+    coeffs = e3nn.s2_sum_of_diracs(positions=pos, weights=val, lmax=lmax, p_val=1, p_arg=-1)
     sig = e3nn.to_s2grid(coeffs, 50, 49, quadrature="gausslegendre")
 
     x, f = sig.find_peaks(lmax)
