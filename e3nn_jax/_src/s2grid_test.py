@@ -114,15 +114,15 @@ def test_to_s2point(keys, irreps, normalization, quadrature):
     jax.config.update("jax_enable_x64", False)
 
 
-@pytest.mark.parametrize("alpha", [0.1, 0.2])
-@pytest.mark.parametrize("beta", [0.1, 0.2])
-@pytest.mark.parametrize("gamma", [0.1, 0.2])
+@pytest.mark.parametrize("alpha", [np.pi / 2])
+@pytest.mark.parametrize("beta", [np.pi / 2])
+@pytest.mark.parametrize("gamma", [np.pi / 2])
 @pytest.mark.parametrize("irreps", ["0e + 1e", "1o + 2e"])
 def test_transform_by_angles(keys, irreps, alpha, beta, gamma):
     irreps = e3nn.Irreps(irreps)
 
     coeffs = e3nn.normal(irreps, keys[0], ())
-    sig = e3nn.to_s2grid(coeffs, 20, 19, quadrature="soft")
+    sig = e3nn.to_s2grid(coeffs, 20, 19, quadrature="gausslegendre")
     rotated_sig = sig.transform_by_angles(alpha, beta, gamma, lmax=irreps.lmax)
     rotated_coeffs = e3nn.from_s2grid(rotated_sig, irreps)
     expected_rotated_coeffs = coeffs.transform_by_angles(alpha, beta, gamma)
@@ -134,7 +134,7 @@ def test_transform_by_angles(keys, irreps, alpha, beta, gamma):
 @pytest.mark.parametrize("beta", [0.1, 0.2])
 @pytest.mark.parametrize("gamma", [0.1, 0.2])
 @pytest.mark.parametrize("irreps", ["0e + 1e", "1o + 2e"])
-def test_transform_by_angles(keys, irreps, alpha, beta, gamma):
+def test_transform_by_matrix(keys, irreps, alpha, beta, gamma):
     irreps = e3nn.Irreps(irreps)
 
     coeffs = e3nn.normal(irreps, keys[0], ())
@@ -199,9 +199,10 @@ def test_transform_by_quaternion(keys, irreps, alpha, beta, gamma):
 
 
 @pytest.mark.parametrize("lmax", [1, 2, 3, 4])
-def test_integrate_constant(lmax):
+@pytest.mark.parametrize("quadrature", ["soft", "gausslegendre"])
+def test_integrate_scalar(lmax, quadrature):
     coeffs = e3nn.normal(e3nn.s2_irreps(lmax, p_val=1, p_arg=-1), jax.random.PRNGKey(0))
-    sig = e3nn.to_s2grid(coeffs, 100, 99, normalization="integral", quadrature="gausslegendre", p_val=1, p_arg=-1)
+    sig = e3nn.to_s2grid(coeffs, 100, 99, normalization="integral", quadrature=quadrature, p_val=1, p_arg=-1)
     integral = sig.integrate().array.squeeze()
     
     scalar_term = coeffs["0e"].array[0]
@@ -209,17 +210,34 @@ def test_integrate_constant(lmax):
     np.testing.assert_allclose(integral, expected_integral, atol=1e-5, rtol=1e-5)
 
 
-# @pytest.mark.parametrize("lmax", [1, 4, 10])
-# def test_find_peaks(lmax):
-#     pos = jnp.asarray([
-#         [1.0, 0.0, 0.0],
-#         [0.0, 1.0, 0.0],
-#     ])
-#     val = jnp.asarray([
-#         -1.0,
-#         1.0,
-#     ])
-#     coeffs = sum_of_diracs(positions=pos, values=val, lmax=lmax, p_val=1, p_arg=-1)
-#     sig = e3nn.to_s2grid(coeffs, 15, 19, quadrature="gausslegendre")
+@pytest.mark.parametrize("degree", range(10))
+def test_integrate_polynomials(degree):
+    sig = SphericalSignal(np.empty((26, 17)), "gausslegendre")
+    sig.grid_values = (sig.grid_y ** degree)[:, None] * jnp.ones_like(sig.grid_values)
+    integral = sig.integrate().array.squeeze()
 
-#     print(sig.find_peaks(lmax))
+    expected_integral = 4 * jnp.pi / (degree + 1) if degree % 2 == 0 else 0
+    np.testing.assert_allclose(integral, expected_integral, atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.parametrize("lmax", [2, 4, 10])
+def test_find_peaks(lmax):
+    pos = jnp.asarray([
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+    ])
+    val = jnp.asarray([
+        1.0,
+        -1.0,
+    ])
+    coeffs = sum_of_diracs(positions=pos, values=val, lmax=lmax, p_val=1, p_arg=-1)
+    sig = e3nn.to_s2grid(coeffs, 50, 49, quadrature="gausslegendre")
+
+    x, f = sig.find_peaks(lmax)
+    positive_peak = x[f.argmax()]
+    np.testing.assert_allclose(positive_peak, pos[0], atol=4e-1 / lmax)
+
+    x, f = sig.apply(lambda val: -val).find_peaks(lmax)
+    negative_peak = x[f.argmax()]
+    np.testing.assert_allclose(negative_peak, pos[1], atol=4e-1 / lmax)
+

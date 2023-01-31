@@ -77,6 +77,10 @@ class SphericalSignal:
         self.p_val = p_val
         self.p_arg = p_arg
 
+    def __repr__(self):
+        kws = [f"{key}={value!r}" for key, value in self.__dict__.items()]
+        return "{}({})".format(type(self).__name__, ", ".join(kws))
+
     def __mul__(self, scalar: float) -> "SphericalSignal":
         """Multiply SphericalSignal by a scalar."""
         return SphericalSignal(self.grid_values * scalar, self.quadrature, self.p_val, self.p_arg)
@@ -225,16 +229,15 @@ class SphericalSignal:
 
         return list(set(iii).intersection(set(jjj)))
 
-    # TODO: add tests for this function
     def find_peaks(self, lmax: int):
         r"""Locate peaks on the signal on the sphere."""
         grid_resolution = self.grid_resolution
         x1, f1 = self.grid_vectors, self.grid_values
 
         # Rotate signal.
-        abc = np.array([jnp.pi / 2, jnp.pi / 2, jnp.pi / 2])
+        abc = (np.pi / 2, np.pi / 2, np.pi / 2)
         rotated_signal = self.transform_by_angles(*abc, lmax=lmax)
-        rotated_vectors = e3nn.IrrepsArray("1o", x1).transform_by_angles(*abc)
+        rotated_vectors = e3nn.IrrepsArray("1o", x1).transform_by_angles(*abc).array
         x2, f2 = rotated_vectors, rotated_signal.grid_values
 
         ij = self._find_peaks_2d(f1)
@@ -246,7 +249,7 @@ class SphericalSignal:
         f2p = np.stack([f2[i, j] for i, j in ij])
 
         # Union of the results
-        mask = scipy.spatial.distance.cdist(x1p, x2p) < 2 * jnp.pi / max(*grid_resolution)
+        mask = scipy.spatial.distance.cdist(x1p, x2p) < 2 * np.pi / max(*grid_resolution)
         x = np.concatenate([x1p[mask.sum(axis=1) == 0], x2p])
         f = np.concatenate([f1p[mask.sum(axis=1) == 0], f2p])
 
@@ -307,12 +310,11 @@ class SphericalSignal:
             surfacecolor=f,
         )
 
-    # TODO: add `integral` method to compute the integral of the signal on the sphere
     def integrate(self) -> e3nn.IrrepsArray:
         values = self.quadrature_weights[:, None] * self.grid_values
         values = jnp.sum(values, axis=0)
-        values = jnp.mean(values, keepdims=True) * jnp.float_power(4 * jnp.pi, 1.5)
-        # The integral has parity.
+        values = jnp.mean(values, keepdims=True) * jnp.float_power(4 * jnp.pi, 1.)
+        # Handle parity of integral.
         integral_irreps = {1: "0e", -1: "0o"}[self.p_val]
         return e3nn.IrrepsArray(
             integral_irreps, values
@@ -554,11 +556,12 @@ def _normalization(lmax: int, normalization: str, dtype) -> jnp.ndarray:
         # given that all component has mean 0 and variance 1/(2L+1)
         return jnp.sqrt(4 * jnp.pi) * jnp.ones(lmax + 1, dtype) / jnp.sqrt(lmax + 1)
     if normalization == "integral":
-        return jnp.ones(lmax + 1, dtype)
+        return jnp.sqrt(4 * jnp.pi) * jnp.ones(lmax + 1, dtype)
 
     raise Exception("normalization needs to be 'norm', 'component' or 'integral'")
 
 
+# TODO (mariogeiger): consider making default normalization as "integral" for correct quadrature.
 def to_s2grid(
     coeffs: e3nn.IrrepsArray,
     res_beta: int,
